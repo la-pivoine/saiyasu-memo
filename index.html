@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffb6d9">
+<title>最安値メモ</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-deco" aria-hidden="true">
+    <span class="deco-star s1">✨</span>
+    <span class="deco-star s2">🎀</span>
+    <span class="deco-star s3">⭐</span>
+  </div>
+  <h1>💰 さいやすメモ</h1>
+  <p class="app-sub">おかいもの記録帳</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-category="food">🍎 食品</button>
+  <button class="tab-btn" data-category="other">🧴 それ以外</button>
+</nav>
+
+<nav class="kana-tabs" id="kana-tabs"></nav>
+
+<main id="list-container">
+  <ul id="product-list"></ul>
+  <div id="empty-msg" class="empty-msg" hidden>
+    <div class="empty-illust">🛍️</div>
+    <p>まだ商品が登録されていないよ！<br>右下の「＋」から追加してね</p>
+  </div>
+</main>
+
+<button id="add-btn" class="fab" aria-label="商品を追加">＋</button>
+
+<!-- 追加・編集モーダル -->
+<div id="edit-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-illust" id="modal-illust">🛒</div>
+    <h2 id="modal-title">商品を追加</h2>
+    <form id="product-form">
+      <label>
+        🏷️ 商品名
+        <input type="text" id="f-name" required placeholder="例：卵">
+      </label>
+      <label>
+        🔤 よみがな（ひらがな）
+        <input type="text" id="f-kana" required placeholder="例：たまご">
+      </label>
+
+      <div id="price-slots"></div>
+
+      <input type="hidden" id="f-id">
+      <input type="hidden" id="f-category">
+
+      <div class="modal-actions">
+        <button type="button" id="delete-btn" class="btn-danger" hidden>削除</button>
+        <button type="button" id="cancel-btn" class="btn-secondary">キャンセル</button>
+        <button type="submit" class="btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
