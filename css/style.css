@@ -307,8 +307,15 @@ body {
   border-color: transparent;
 }
 
-.shopping-name {
+.shopping-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shopping-name {
   font-size: 15.5px;
   font-weight: 700;
   color: #6b4c6b;
@@ -316,6 +323,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.shopping-price-hint {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ff6f9c;
 }
 
 .shopping-store-tags {

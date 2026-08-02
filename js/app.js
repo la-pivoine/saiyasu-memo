@@ -270,6 +270,10 @@ async function toggleBought(item) {
   await loadShoppingItems();
 }
 
+function findPriceMatch(name) {
+  return products.find((p) => p.name === name && p.entries && p.entries.length);
+}
+
 function renderShopping() {
   const items = shoppingItems
     .filter((it) => {
@@ -287,17 +291,25 @@ function renderShopping() {
     const li = document.createElement('li');
     li.className = 'shopping-item';
     const tags = itemStores(it).map((s) => `<span class="shopping-store-tag">${escapeHtml(s)}</span>`).join('');
+    const match = findPriceMatch(it.name);
+    const cheapest = match ? match.entries[0] : null;
+    const priceHint = cheapest
+      ? `<span class="shopping-price-hint">🥇 ${escapeHtml(cheapest.store)} ¥${cheapest.price.toLocaleString()}</span>`
+      : '';
     li.innerHTML = `
       <label class="shopping-check">
         <input type="checkbox" class="shopping-checkbox">
         <span class="checkmark"></span>
       </label>
-      <span class="shopping-name"></span>
+      <div class="shopping-main">
+        <span class="shopping-name"></span>
+        ${priceHint}
+      </div>
       <span class="shopping-store-tags">${tags}</span>
     `;
     li.querySelector('.shopping-name').textContent = it.name;
     li.querySelector('.shopping-checkbox').addEventListener('change', () => toggleBought(it));
-    li.querySelector('.shopping-name').addEventListener('click', () => openShoppingModal(it));
+    li.querySelector('.shopping-main').addEventListener('click', () => openShoppingModal(it));
     shoppingListEl.appendChild(li);
   });
 }
@@ -464,6 +476,7 @@ function formatDate(dateStr) {
 async function loadProducts() {
   products = await dbGetAll();
   render();
+  renderShopping();
 }
 
 buildKanaTabs();
