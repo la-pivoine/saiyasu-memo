@@ -318,14 +318,23 @@ body {
   white-space: nowrap;
 }
 
+.shopping-store-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  max-width: 40%;
+  flex-shrink: 0;
+}
+
 .shopping-store-tag {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #ff8fb8;
   background: #fff0f7;
-  padding: 4px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .empty-msg {

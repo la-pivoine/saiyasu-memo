@@ -20,9 +20,6 @@ const shoppingEmptyMsg = document.getElementById('shopping-empty-msg');
 const shoppingModal = document.getElementById('shopping-modal');
 const shoppingForm = document.getElementById('shopping-form');
 const shoppingModalTitle = document.getElementById('shopping-modal-title');
-const sStoreSelect = document.getElementById('s-store-select');
-const sStoreOtherLabel = document.getElementById('s-store-other-label');
-const sStoreOtherInput = document.getElementById('s-store-other');
 const sDeleteBtn = document.getElementById('s-delete-btn');
 
 const CATEGORY_ICON = { food: '🍎', other: '🧴' };
@@ -134,10 +131,40 @@ function buildPriceSlots() {
 const SHOPPING_TABS = ['all', ...STORE_OPTIONS, '他'];
 const SHOPPING_LABEL = { all: 'すべて', 他: 'その他' };
 
-function buildShoppingStoreOptions() {
-  const opts = STORE_OPTIONS.map((s) => `<option value="${s}">${s}</option>`).join('');
-  const otherOpt = sStoreSelect.querySelector('option[value="__other__"]');
-  otherOpt.insertAdjacentHTML('beforebegin', opts);
+function itemStores(it) {
+  if (it.stores && it.stores.length) return it.stores;
+  return it.store ? [it.store] : [];
+}
+
+function buildShoppingStoreSlots() {
+  const container = document.getElementById('shopping-store-slots');
+  container.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'price-slot';
+    wrap.innerHTML = `
+      <div class="price-slot-title">お店 ${i + 1}${i === 0 ? '' : '（任意）'}</div>
+      <label>
+        🏪 お店
+        <select class="s-slot-store">
+          <option value="">選ばない</option>
+          ${STORE_OPTIONS.map((s) => `<option value="${s}">${s}</option>`).join('')}
+          <option value="__other__">その他（入力する）</option>
+        </select>
+      </label>
+      <label class="s-slot-store-other-label" hidden>
+        🏪 店舗名を入力
+        <input type="text" class="s-slot-store-other" placeholder="例：〇〇スーパー">
+      </label>
+    `;
+    container.appendChild(wrap);
+  }
+  container.querySelectorAll('.s-slot-store').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const otherLabel = sel.closest('.price-slot').querySelector('.s-slot-store-other-label');
+      otherLabel.hidden = sel.value !== '__other__';
+    });
+  });
 }
 
 function buildShoppingTabs() {
@@ -155,25 +182,29 @@ function buildShoppingTabs() {
   });
 }
 
-sStoreSelect.addEventListener('change', () => {
-  sStoreOtherLabel.hidden = sStoreSelect.value !== '__other__';
-  if (!sStoreOtherLabel.hidden) sStoreOtherInput.focus();
-});
-
 document.getElementById('s-cancel-btn').addEventListener('click', closeShoppingModal);
 
 shoppingForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const store = sStoreSelect.value === '__other__' ? sStoreOtherInput.value.trim() : sStoreSelect.value;
-  if (!store) {
-    sStoreOtherInput.focus();
+  const slots = document.querySelectorAll('#shopping-store-slots .price-slot');
+  const stores = [];
+  for (const slot of slots) {
+    const sel = slot.querySelector('.s-slot-store');
+    const otherInput = slot.querySelector('.s-slot-store-other');
+    const store = sel.value === '__other__' ? otherInput.value.trim() : sel.value;
+    if (store && !stores.includes(store)) stores.push(store);
+  }
+
+  if (stores.length === 0) {
+    alert('お店を少なくとも1つは選んでね');
     return;
   }
+
   const id = document.getElementById('s-id').value || crypto.randomUUID();
   const item = {
     id,
     name: document.getElementById('s-name').value.trim(),
-    store,
+    stores,
     createdAt: Date.now(),
   };
   await dbPut(item, SHOPPING_STORE_NAME);
@@ -192,24 +223,39 @@ sDeleteBtn.addEventListener('click', async () => {
 
 function openShoppingModal(item) {
   shoppingForm.reset();
-  sStoreOtherLabel.hidden = true;
-  sStoreOtherInput.value = '';
+  const slots = document.querySelectorAll('#shopping-store-slots .price-slot');
+  slots.forEach((slot) => {
+    slot.querySelector('.s-slot-store-other-label').hidden = true;
+    slot.querySelector('.s-slot-store-other').value = '';
+    slot.querySelector('.s-slot-store').value = '';
+  });
+
   if (item) {
     shoppingModalTitle.textContent = '買うものを編集';
     document.getElementById('s-id').value = item.id;
     document.getElementById('s-name').value = item.name;
-    if (STORE_OPTIONS.includes(item.store)) {
-      sStoreSelect.value = item.store;
-    } else {
-      sStoreSelect.value = '__other__';
-      sStoreOtherLabel.hidden = false;
-      sStoreOtherInput.value = item.store;
-    }
+
+    itemStores(item).forEach((store, i) => {
+      const slot = slots[i];
+      if (!slot) return;
+      const sel = slot.querySelector('.s-slot-store');
+      const otherLabel = slot.querySelector('.s-slot-store-other-label');
+      const otherInput = slot.querySelector('.s-slot-store-other');
+      if (STORE_OPTIONS.includes(store)) {
+        sel.value = store;
+      } else {
+        sel.value = '__other__';
+        otherLabel.hidden = false;
+        otherInput.value = store;
+      }
+    });
     sDeleteBtn.hidden = false;
   } else {
     shoppingModalTitle.textContent = '買うものを追加';
     document.getElementById('s-id').value = '';
-    sStoreSelect.value = currentShoppingStore !== 'all' && currentShoppingStore !== '他' ? currentShoppingStore : '';
+    if (currentShoppingStore !== 'all' && currentShoppingStore !== '他') {
+      slots[0].querySelector('.s-slot-store').value = currentShoppingStore;
+    }
     sDeleteBtn.hidden = true;
   }
   shoppingModal.hidden = false;
@@ -227,9 +273,10 @@ async function toggleBought(item) {
 function renderShopping() {
   const items = shoppingItems
     .filter((it) => {
+      const stores = itemStores(it);
       if (currentShoppingStore === 'all') return true;
-      if (currentShoppingStore === '他') return !STORE_OPTIONS.includes(it.store);
-      return it.store === currentShoppingStore;
+      if (currentShoppingStore === '他') return stores.some((s) => !STORE_OPTIONS.includes(s));
+      return stores.includes(currentShoppingStore);
     })
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
@@ -239,16 +286,16 @@ function renderShopping() {
   items.forEach((it) => {
     const li = document.createElement('li');
     li.className = 'shopping-item';
+    const tags = itemStores(it).map((s) => `<span class="shopping-store-tag">${escapeHtml(s)}</span>`).join('');
     li.innerHTML = `
       <label class="shopping-check">
         <input type="checkbox" class="shopping-checkbox">
         <span class="checkmark"></span>
       </label>
       <span class="shopping-name"></span>
-      <span class="shopping-store-tag"></span>
+      <span class="shopping-store-tags">${tags}</span>
     `;
     li.querySelector('.shopping-name').textContent = it.name;
-    li.querySelector('.shopping-store-tag').textContent = it.store;
     li.querySelector('.shopping-checkbox').addEventListener('change', () => toggleBought(it));
     li.querySelector('.shopping-name').addEventListener('click', () => openShoppingModal(it));
     shoppingListEl.appendChild(li);
@@ -421,7 +468,7 @@ async function loadProducts() {
 
 buildKanaTabs();
 buildPriceSlots();
-buildShoppingStoreOptions();
+buildShoppingStoreSlots();
 buildShoppingTabs();
 loadProducts();
 loadShoppingItems();

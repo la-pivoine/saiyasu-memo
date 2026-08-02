@@ -98,17 +98,8 @@
         🏷️ 品名
         <input type="text" id="s-name" required placeholder="例：牛乳">
       </label>
-      <label>
-        🏪 お店
-        <select id="s-store-select" required>
-          <option value="" disabled selected>選んでね</option>
-          <option value="__other__">その他（入力する）</option>
-        </select>
-      </label>
-      <label id="s-store-other-label" hidden>
-        🏪 店舗名を入力
-        <input type="text" id="s-store-other" placeholder="例：〇〇スーパー">
-      </label>
+      <div id="shopping-store-slots"></div>
+
       <input type="hidden" id="s-id">
 
       <div class="modal-actions">
