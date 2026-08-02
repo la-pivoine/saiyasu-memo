@@ -1,6 +1,9 @@
+let currentMode = 'price';
 let currentCategory = 'food';
 let currentKanaRow = 'all';
+let currentShoppingStore = 'all';
 let products = [];
+let shoppingItems = [];
 
 const listEl = document.getElementById('product-list');
 const emptyMsg = document.getElementById('empty-msg');
@@ -9,6 +12,18 @@ const form = document.getElementById('product-form');
 const modalTitle = document.getElementById('modal-title');
 const modalIllust = document.getElementById('modal-illust');
 const deleteBtn = document.getElementById('delete-btn');
+
+const priceView = document.getElementById('price-view');
+const shoppingView = document.getElementById('shopping-view');
+const shoppingListEl = document.getElementById('shopping-list');
+const shoppingEmptyMsg = document.getElementById('shopping-empty-msg');
+const shoppingModal = document.getElementById('shopping-modal');
+const shoppingForm = document.getElementById('shopping-form');
+const shoppingModalTitle = document.getElementById('shopping-modal-title');
+const sStoreSelect = document.getElementById('s-store-select');
+const sStoreOtherLabel = document.getElementById('s-store-other-label');
+const sStoreOtherInput = document.getElementById('s-store-other');
+const sDeleteBtn = document.getElementById('s-delete-btn');
 
 const CATEGORY_ICON = { food: '🍎', other: '🧴' };
 const STORE_OPTIONS = ['マルショク新守恒', 'コスモス', 'ココカラ', 'ハローデイ', 'トライアル', 'サンリブ守恒', 'ヨドバシ'];
@@ -47,6 +62,16 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.classList.add('active');
     currentCategory = btn.dataset.category;
     render();
+  });
+});
+
+document.querySelectorAll('.mode-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    priceView.hidden = currentMode !== 'price';
+    shoppingView.hidden = currentMode !== 'shopping';
   });
 });
 
@@ -106,7 +131,139 @@ function buildPriceSlots() {
   });
 }
 
-document.getElementById('add-btn').addEventListener('click', () => openModal());
+const SHOPPING_TABS = ['all', ...STORE_OPTIONS, '他'];
+const SHOPPING_LABEL = { all: 'すべて', 他: 'その他' };
+
+function buildShoppingStoreOptions() {
+  const opts = STORE_OPTIONS.map((s) => `<option value="${s}">${s}</option>`).join('');
+  const otherOpt = sStoreSelect.querySelector('option[value="__other__"]');
+  otherOpt.insertAdjacentHTML('beforebegin', opts);
+}
+
+function buildShoppingTabs() {
+  const nav = document.getElementById('shopping-store-tabs');
+  nav.innerHTML = SHOPPING_TABS.map(
+    (s) => `<button class="kana-btn${s === 'all' ? ' active' : ''}" data-store="${s}">${SHOPPING_LABEL[s] || s}</button>`
+  ).join('');
+  nav.querySelectorAll('.kana-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      nav.querySelectorAll('.kana-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentShoppingStore = btn.dataset.store;
+      renderShopping();
+    });
+  });
+}
+
+sStoreSelect.addEventListener('change', () => {
+  sStoreOtherLabel.hidden = sStoreSelect.value !== '__other__';
+  if (!sStoreOtherLabel.hidden) sStoreOtherInput.focus();
+});
+
+document.getElementById('s-cancel-btn').addEventListener('click', closeShoppingModal);
+
+shoppingForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const store = sStoreSelect.value === '__other__' ? sStoreOtherInput.value.trim() : sStoreSelect.value;
+  if (!store) {
+    sStoreOtherInput.focus();
+    return;
+  }
+  const id = document.getElementById('s-id').value || crypto.randomUUID();
+  const item = {
+    id,
+    name: document.getElementById('s-name').value.trim(),
+    store,
+    createdAt: Date.now(),
+  };
+  await dbPut(item, SHOPPING_STORE_NAME);
+  await loadShoppingItems();
+  closeShoppingModal();
+});
+
+sDeleteBtn.addEventListener('click', async () => {
+  const id = document.getElementById('s-id').value;
+  if (!id) return;
+  if (!confirm('この買い物メモを削除しますか？')) return;
+  await dbDelete(id, SHOPPING_STORE_NAME);
+  await loadShoppingItems();
+  closeShoppingModal();
+});
+
+function openShoppingModal(item) {
+  shoppingForm.reset();
+  sStoreOtherLabel.hidden = true;
+  sStoreOtherInput.value = '';
+  if (item) {
+    shoppingModalTitle.textContent = '買うものを編集';
+    document.getElementById('s-id').value = item.id;
+    document.getElementById('s-name').value = item.name;
+    if (STORE_OPTIONS.includes(item.store)) {
+      sStoreSelect.value = item.store;
+    } else {
+      sStoreSelect.value = '__other__';
+      sStoreOtherLabel.hidden = false;
+      sStoreOtherInput.value = item.store;
+    }
+    sDeleteBtn.hidden = false;
+  } else {
+    shoppingModalTitle.textContent = '買うものを追加';
+    document.getElementById('s-id').value = '';
+    sStoreSelect.value = currentShoppingStore !== 'all' && currentShoppingStore !== '他' ? currentShoppingStore : '';
+    sDeleteBtn.hidden = true;
+  }
+  shoppingModal.hidden = false;
+}
+
+function closeShoppingModal() {
+  shoppingModal.hidden = true;
+}
+
+async function toggleBought(item) {
+  await dbDelete(item.id, SHOPPING_STORE_NAME);
+  await loadShoppingItems();
+}
+
+function renderShopping() {
+  const items = shoppingItems
+    .filter((it) => {
+      if (currentShoppingStore === 'all') return true;
+      if (currentShoppingStore === '他') return !STORE_OPTIONS.includes(it.store);
+      return it.store === currentShoppingStore;
+    })
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  shoppingListEl.innerHTML = '';
+  shoppingEmptyMsg.hidden = items.length > 0;
+
+  items.forEach((it) => {
+    const li = document.createElement('li');
+    li.className = 'shopping-item';
+    li.innerHTML = `
+      <label class="shopping-check">
+        <input type="checkbox" class="shopping-checkbox">
+        <span class="checkmark"></span>
+      </label>
+      <span class="shopping-name"></span>
+      <span class="shopping-store-tag"></span>
+    `;
+    li.querySelector('.shopping-name').textContent = it.name;
+    li.querySelector('.shopping-store-tag').textContent = it.store;
+    li.querySelector('.shopping-checkbox').addEventListener('change', () => toggleBought(it));
+    li.querySelector('.shopping-name').addEventListener('click', () => openShoppingModal(it));
+    shoppingListEl.appendChild(li);
+  });
+}
+
+async function loadShoppingItems() {
+  shoppingItems = await dbGetAll(SHOPPING_STORE_NAME);
+  renderShopping();
+}
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  if (currentMode === 'shopping') openShoppingModal();
+  else openModal();
+});
 document.getElementById('cancel-btn').addEventListener('click', closeModal);
 
 form.addEventListener('submit', async (e) => {
@@ -264,7 +421,10 @@ async function loadProducts() {
 
 buildKanaTabs();
 buildPriceSlots();
+buildShoppingStoreOptions();
+buildShoppingTabs();
 loadProducts();
+loadShoppingItems();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

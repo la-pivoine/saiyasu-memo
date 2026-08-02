@@ -23,22 +23,41 @@
   <p class="app-sub">おかいもの記録帳</p>
 </header>
 
-<nav class="tabs">
-  <button class="tab-btn active" data-category="food">🍎 食品</button>
-  <button class="tab-btn" data-category="other">🧴 それ以外</button>
+<nav class="mode-tabs">
+  <button class="mode-btn active" data-mode="price">💰 最安値メモ</button>
+  <button class="mode-btn" data-mode="shopping">🛒 買い物リスト</button>
 </nav>
 
-<nav class="kana-tabs" id="kana-tabs"></nav>
+<div id="price-view">
+  <nav class="tabs">
+    <button class="tab-btn active" data-category="food">🍎 食品</button>
+    <button class="tab-btn" data-category="other">🧴 それ以外</button>
+  </nav>
 
-<main id="list-container">
-  <ul id="product-list"></ul>
-  <div id="empty-msg" class="empty-msg" hidden>
-    <div class="empty-illust">🛍️</div>
-    <p>まだ商品が登録されていないよ！<br>右下の「＋」から追加してね</p>
-  </div>
-</main>
+  <nav class="kana-tabs" id="kana-tabs"></nav>
 
-<button id="add-btn" class="fab" aria-label="商品を追加">＋</button>
+  <main id="list-container">
+    <ul id="product-list"></ul>
+    <div id="empty-msg" class="empty-msg" hidden>
+      <div class="empty-illust">🛍️</div>
+      <p>まだ商品が登録されていないよ！<br>右下の「＋」から追加してね</p>
+    </div>
+  </main>
+</div>
+
+<div id="shopping-view" hidden>
+  <nav class="kana-tabs" id="shopping-store-tabs"></nav>
+
+  <main id="shopping-list-container">
+    <ul id="shopping-list"></ul>
+    <div id="shopping-empty-msg" class="empty-msg" hidden>
+      <div class="empty-illust">🛒</div>
+      <p>買うものがまだないよ！<br>右下の「＋」から追加してね</p>
+    </div>
+  </main>
+</div>
+
+<button id="add-btn" class="fab" aria-label="追加">＋</button>
 
 <!-- 追加・編集モーダル -->
 <div id="edit-modal" class="modal-overlay" hidden>
@@ -63,6 +82,38 @@
       <div class="modal-actions">
         <button type="button" id="delete-btn" class="btn-danger" hidden>削除</button>
         <button type="button" id="cancel-btn" class="btn-secondary">キャンセル</button>
+        <button type="submit" class="btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 買い物リスト 追加・編集モーダル -->
+<div id="shopping-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-illust" id="shopping-modal-illust">🛒</div>
+    <h2 id="shopping-modal-title">買うものを追加</h2>
+    <form id="shopping-form">
+      <label>
+        🏷️ 品名
+        <input type="text" id="s-name" required placeholder="例：牛乳">
+      </label>
+      <label>
+        🏪 お店
+        <select id="s-store-select" required>
+          <option value="" disabled selected>選んでね</option>
+          <option value="__other__">その他（入力する）</option>
+        </select>
+      </label>
+      <label id="s-store-other-label" hidden>
+        🏪 店舗名を入力
+        <input type="text" id="s-store-other" placeholder="例：〇〇スーパー">
+      </label>
+      <input type="hidden" id="s-id">
+
+      <div class="modal-actions">
+        <button type="button" id="s-delete-btn" class="btn-danger" hidden>削除</button>
+        <button type="button" id="s-cancel-btn" class="btn-secondary">キャンセル</button>
         <button type="submit" class="btn-primary">保存</button>
       </div>
     </form>

@@ -1,6 +1,7 @@
 const DB_NAME = 'price-memo-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'products';
+const SHOPPING_STORE_NAME = 'shopping';
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -11,37 +12,41 @@ function openDB() {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('category', 'category', { unique: false });
       }
+      if (!db.objectStoreNames.contains(SHOPPING_STORE_NAME)) {
+        const shopping = db.createObjectStore(SHOPPING_STORE_NAME, { keyPath: 'id' });
+        shopping.createIndex('store', 'store', { unique: false });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function dbGetAll() {
+async function dbGetAll(storeName = STORE_NAME) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).getAll();
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function dbPut(product) {
+async function dbPut(item, storeName = STORE_NAME) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(product);
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(item);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-async function dbDelete(id) {
+async function dbDelete(id, storeName = STORE_NAME) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(id);
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
