@@ -1,4 +1,4 @@
-let currentMode = 'price';
+let currentMode = 'shopping';
 let currentCategory = 'food';
 let currentKanaRow = 'all';
 let currentShoppingStore = 'all';
@@ -23,7 +23,7 @@ const shoppingModalTitle = document.getElementById('shopping-modal-title');
 const sDeleteBtn = document.getElementById('s-delete-btn');
 
 const CATEGORY_ICON = { food: '🍎', other: '🧴' };
-const STORE_OPTIONS = ['マルショク新守恒', 'コスモス', 'ココカラ', 'ハローデイ', 'トライアル', 'サンリブ守恒', 'ヨドバシ'];
+const STORE_OPTIONS = ['マルショク新守恒', 'コスモス', 'ココカラ', 'ハローデイ', 'トライアル', 'サンリブ守恒', 'ヨドバシ', 'エザキ', 'DAISO', '業務スーパー'];
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 const KANA_MAP = {
@@ -327,7 +327,7 @@ document.getElementById('cancel-btn').addEventListener('click', closeModal);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const slots = document.querySelectorAll('.price-slot');
+  const slots = document.querySelectorAll('#price-slots .price-slot');
   const entries = [];
   for (const slot of slots) {
     const sel = slot.querySelector('.slot-store');
@@ -382,7 +382,7 @@ function openModal(product) {
   document.querySelectorAll('.slot-store-other-label').forEach((l) => { l.hidden = true; });
   document.querySelectorAll('.slot-store-other').forEach((i) => { i.value = ''; });
   const today = new Date().toISOString().slice(0, 10);
-  const slots = document.querySelectorAll('.price-slot');
+  const slots = document.querySelectorAll('#price-slots .price-slot');
 
   if (product) {
     modalTitle.textContent = '商品を編集';

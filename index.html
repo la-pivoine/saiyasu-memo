@@ -24,11 +24,23 @@
 </header>
 
 <nav class="mode-tabs">
-  <button class="mode-btn active" data-mode="price">💰 最安値メモ</button>
-  <button class="mode-btn" data-mode="shopping">🛒 買い物リスト</button>
+  <button class="mode-btn active" data-mode="shopping">🛒 買い物リスト</button>
+  <button class="mode-btn" data-mode="price">💰 最安値メモ</button>
 </nav>
 
-<div id="price-view">
+<div id="shopping-view">
+  <nav class="kana-tabs" id="shopping-store-tabs"></nav>
+
+  <main id="shopping-list-container">
+    <ul id="shopping-list"></ul>
+    <div id="shopping-empty-msg" class="empty-msg" hidden>
+      <div class="empty-illust">🛒</div>
+      <p>買うものがまだないよ！<br>右下の「＋」から追加してね</p>
+    </div>
+  </main>
+</div>
+
+<div id="price-view" hidden>
   <nav class="tabs">
     <button class="tab-btn active" data-category="food">🍎 食品</button>
     <button class="tab-btn" data-category="other">🧴 それ以外</button>
@@ -41,18 +53,6 @@
     <div id="empty-msg" class="empty-msg" hidden>
       <div class="empty-illust">🛍️</div>
       <p>まだ商品が登録されていないよ！<br>右下の「＋」から追加してね</p>
-    </div>
-  </main>
-</div>
-
-<div id="shopping-view" hidden>
-  <nav class="kana-tabs" id="shopping-store-tabs"></nav>
-
-  <main id="shopping-list-container">
-    <ul id="shopping-list"></ul>
-    <div id="shopping-empty-msg" class="empty-msg" hidden>
-      <div class="empty-illust">🛒</div>
-      <p>買うものがまだないよ！<br>右下の「＋」から追加してね</p>
     </div>
   </main>
 </div>
