@@ -23,7 +23,7 @@ const shoppingModalTitle = document.getElementById('shopping-modal-title');
 const sDeleteBtn = document.getElementById('s-delete-btn');
 
 const CATEGORY_ICON = { food: '🍎', other: '🧴' };
-const STORE_OPTIONS = ['マルショク新守恒', 'コスモス', 'ココカラ', 'ハローデイ', 'トライアル', 'サンリブ守恒', 'ヨドバシ', 'エザキ', 'DAISO', '業務スーパー'];
+const STORE_OPTIONS = ['マルショク新守恒', 'コスモス', 'DAISO', '業務スーパー', 'ココカラ', 'ヨドバシ', 'エザキ', 'サンリブ守恒', 'ハローデイ', 'トライアル', 'セリア'];
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 const KANA_MAP = {
@@ -201,11 +201,13 @@ shoppingForm.addEventListener('submit', async (e) => {
   }
 
   const id = document.getElementById('s-id').value || crypto.randomUUID();
+  const existing = shoppingItems.find((s) => s.id === id);
   const item = {
     id,
     name: document.getElementById('s-name').value.trim(),
     stores,
-    createdAt: Date.now(),
+    createdAt: existing ? existing.createdAt : Date.now(),
+    order: existing && existing.order !== undefined ? existing.order : Date.now(),
   };
   await dbPut(item, SHOPPING_STORE_NAME);
   await loadShoppingItems();
@@ -282,7 +284,7 @@ function renderShopping() {
       if (currentShoppingStore === '他') return stores.some((s) => !STORE_OPTIONS.includes(s));
       return stores.includes(currentShoppingStore);
     })
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    .sort((a, b) => (a.order ?? a.createdAt ?? 0) - (b.order ?? b.createdAt ?? 0));
 
   shoppingListEl.innerHTML = '';
   shoppingEmptyMsg.hidden = items.length > 0;
@@ -290,6 +292,7 @@ function renderShopping() {
   items.forEach((it) => {
     const li = document.createElement('li');
     li.className = 'shopping-item';
+    li.dataset.id = it.id;
     const tags = itemStores(it).map((s) => `<span class="shopping-store-tag">${escapeHtml(s)}</span>`).join('');
     const match = findPriceMatch(it.name);
     const cheapest = match ? match.entries[0] : null;
@@ -306,6 +309,7 @@ function renderShopping() {
         ${priceHint}
       </div>
       <span class="shopping-store-tags">${tags}</span>
+      <span class="shopping-drag-handle" aria-hidden="true">⠿</span>
     `;
     li.querySelector('.shopping-name').textContent = it.name;
     li.querySelector('.shopping-checkbox').addEventListener('change', () => toggleBought(it));
@@ -316,7 +320,183 @@ function renderShopping() {
 
 async function loadShoppingItems() {
   shoppingItems = await dbGetAll(SHOPPING_STORE_NAME);
+  const migrations = [];
+  shoppingItems.forEach((it) => {
+    if (it.order === undefined) {
+      it.order = it.createdAt || Date.now();
+      migrations.push(dbPut(it, SHOPPING_STORE_NAME));
+    }
+  });
+  if (migrations.length) await Promise.all(migrations);
   renderShopping();
+}
+
+function setupShoppingDragReorder() {
+  const LONG_PRESS_MS = 450;
+  const MOVE_CANCEL_PX = 10;
+
+  let longPressTimer = null;
+  let dragEl = null;
+  let placeholder = null;
+  let startX = 0;
+  let startY = 0;
+  let origTop = 0;
+  let origLeft = 0;
+  let origWidth = 0;
+  let origHeight = 0;
+  let activated = false;
+  let pointerId = null;
+
+  function resetDragStyles() {
+    if (!dragEl) return;
+    dragEl.classList.remove('dragging');
+    dragEl.style.position = '';
+    dragEl.style.top = '';
+    dragEl.style.left = '';
+    dragEl.style.width = '';
+    dragEl.style.zIndex = '';
+    dragEl.style.touchAction = '';
+  }
+
+  function clearState() {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+    resetDragStyles();
+    if (placeholder && placeholder.parentNode) placeholder.remove();
+    dragEl = null;
+    placeholder = null;
+    activated = false;
+    pointerId = null;
+  }
+
+  function onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    const li = e.target.closest('.shopping-item');
+    if (!li || !shoppingListEl.contains(li)) return;
+    if (e.target.closest('.shopping-check')) return;
+    dragEl = li;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    longPressTimer = setTimeout(() => activateDrag(), LONG_PRESS_MS);
+  }
+
+  function activateDrag() {
+    if (!dragEl) return;
+    activated = true;
+    const rect = dragEl.getBoundingClientRect();
+    origTop = rect.top;
+    origLeft = rect.left;
+    origWidth = rect.width;
+    origHeight = rect.height;
+
+    placeholder = document.createElement('li');
+    placeholder.className = 'shopping-item shopping-placeholder';
+    placeholder.style.height = origHeight + 'px';
+    dragEl.parentNode.insertBefore(placeholder, dragEl);
+
+    dragEl.classList.add('dragging');
+    dragEl.style.position = 'fixed';
+    dragEl.style.top = origTop + 'px';
+    dragEl.style.left = origLeft + 'px';
+    dragEl.style.width = origWidth + 'px';
+    dragEl.style.zIndex = '999';
+    dragEl.style.touchAction = 'none';
+
+    try { dragEl.setPointerCapture(pointerId); } catch (err) { /* noop */ }
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
+
+  function onPointerMove(e) {
+    if (pointerId === null || e.pointerId !== pointerId) return;
+    if (!activated) {
+      if (Math.abs(e.clientX - startX) > MOVE_CANCEL_PX || Math.abs(e.clientY - startY) > MOVE_CANCEL_PX) {
+        clearTimeout(longPressTimer);
+      }
+      return;
+    }
+    e.preventDefault();
+    const dy = e.clientY - startY;
+    dragEl.style.top = (origTop + dy) + 'px';
+
+    const dragCenter = origTop + dy + origHeight / 2;
+    const siblings = Array.from(shoppingListEl.children).filter(
+      (el) => el !== dragEl && el !== placeholder && el.classList.contains('shopping-item')
+    );
+    let target = null;
+    let insertBefore = true;
+    for (const sib of siblings) {
+      const r = sib.getBoundingClientRect();
+      const sibCenter = r.top + r.height / 2;
+      if (dragCenter < sibCenter) { target = sib; insertBefore = true; break; }
+    }
+    if (!target && siblings.length) {
+      target = siblings[siblings.length - 1];
+      insertBefore = false;
+    }
+    if (target) {
+      if (insertBefore) {
+        if (placeholder.nextSibling !== target) shoppingListEl.insertBefore(placeholder, target);
+      } else if (target.nextSibling !== placeholder) {
+        shoppingListEl.insertBefore(placeholder, target.nextSibling);
+      }
+    }
+  }
+
+  async function finalizeReorder(draggedId) {
+    const orderedIds = Array.from(shoppingListEl.children)
+      .filter((el) => el.classList.contains('shopping-item') && !el.classList.contains('shopping-placeholder'))
+      .map((el) => el.dataset.id);
+    const idx = orderedIds.indexOf(draggedId);
+    if (idx === -1) return;
+    const prevItem = idx > 0 ? shoppingItems.find((s) => s.id === orderedIds[idx - 1]) : null;
+    const nextItem = idx < orderedIds.length - 1 ? shoppingItems.find((s) => s.id === orderedIds[idx + 1]) : null;
+    const draggedItem = shoppingItems.find((s) => s.id === draggedId);
+    if (!draggedItem) return;
+
+    let newOrder;
+    if (prevItem && nextItem) newOrder = (prevItem.order + nextItem.order) / 2;
+    else if (prevItem) newOrder = prevItem.order + 1;
+    else if (nextItem) newOrder = nextItem.order - 1;
+    else newOrder = Date.now();
+
+    draggedItem.order = newOrder;
+    await dbPut(draggedItem, SHOPPING_STORE_NAME);
+    renderShopping();
+  }
+
+  async function onPointerUp(e) {
+    if (pointerId === null || e.pointerId !== pointerId) return;
+    clearTimeout(longPressTimer);
+    if (!activated) { clearState(); return; }
+
+    const finishedEl = dragEl;
+    const finishedPlaceholder = placeholder;
+    const draggedId = finishedEl.dataset.id;
+
+    finishedEl.addEventListener('click', (ev) => ev.stopPropagation(), { capture: true, once: true });
+
+    shoppingListEl.insertBefore(finishedEl, finishedPlaceholder);
+    finishedPlaceholder.remove();
+    placeholder = null;
+    resetDragStyles();
+
+    dragEl = null;
+    activated = false;
+    pointerId = null;
+
+    await finalizeReorder(draggedId);
+  }
+
+  function onPointerCancel(e) {
+    if (pointerId === null || e.pointerId !== pointerId) return;
+    clearState();
+  }
+
+  shoppingListEl.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove, { passive: false });
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerCancel);
 }
 
 document.getElementById('add-btn').addEventListener('click', () => {
@@ -483,6 +663,7 @@ buildKanaTabs();
 buildPriceSlots();
 buildShoppingStoreSlots();
 buildShoppingTabs();
+setupShoppingDragReorder();
 loadProducts();
 loadShoppingItems();
 
