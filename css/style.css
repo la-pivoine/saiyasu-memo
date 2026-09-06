@@ -302,10 +302,25 @@ body {
 
 .shopping-drag-handle {
   flex-shrink: 0;
-  font-size: 16px;
-  color: #d9c6de;
-  padding: 0 2px;
+  font-size: 20px;
+  color: #c7a8d6;
   line-height: 1;
+  width: 34px;
+  height: 34px;
+  margin: -4px -6px -4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  /* タッチ開始時からドラッグ専用にする(スクロールと競合させないため) */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.shopping-drag-handle:active {
+  background: #ffeaf5;
+  color: #ff8fb8;
 }
 
 .shopping-check {

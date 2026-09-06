@@ -371,9 +371,16 @@ function setupShoppingDragReorder() {
 
   function onPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
-    const li = e.target.closest('.shopping-item');
+    // ドラッグは持ち手(⠿)からのみ開始する。
+    // 行全体を対象にすると、スマホでのタッチ開始時に「スクロールかドラッグか」を
+    // ブラウザが先に決めてしまい(touch-actionはtouchstart時点で確定するため)、
+    // 後からJSでpreventDefaultしてもスクロール優先になって長押しドラッグが効かなくなる。
+    // 持ち手にだけ touch-action: none を常時指定しておくことで、その部分に触れた瞬間から
+    // 「これはスクロールさせない」とブラウザに伝えられ、確実にドラッグを検知できる。
+    const handle = e.target.closest('.shopping-drag-handle');
+    if (!handle) return;
+    const li = handle.closest('.shopping-item');
     if (!li || !shoppingListEl.contains(li)) return;
-    if (e.target.closest('.shopping-check')) return;
     dragEl = li;
     pointerId = e.pointerId;
     startX = e.clientX;
