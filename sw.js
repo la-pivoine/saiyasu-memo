@@ -1,4 +1,4 @@
-const CACHE_NAME = 'price-app-v4';
+const CACHE_NAME = 'price-app-v5';
 const ASSETS = [
   './index.html',
   './css/style.css',
