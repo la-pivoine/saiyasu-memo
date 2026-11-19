@@ -444,6 +444,7 @@ body {
   border-radius: 24px 24px 0 0;
   padding: 12px 22px 30px;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   box-shadow: 0 -6px 20px rgba(180, 150, 200, 0.3);
 }
@@ -519,10 +520,16 @@ body {
   min-width: 0;
 }
 
+/* 保存ボタンは画面下に固定し、スクロールしなくても押せるようにする */
 .modal-actions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin: 8px 0 -30px;
+  padding: 10px 0 calc(46px + env(safe-area-inset-bottom));
+  position: sticky;
+  bottom: -30px;
+  background: #fffaf9;
+  box-shadow: 0 -8px 8px -6px rgba(255, 250, 249, 0.95);
 }
 
 .modal-actions button {
