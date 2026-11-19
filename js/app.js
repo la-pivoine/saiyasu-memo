@@ -548,6 +548,7 @@ form.addEventListener('submit', async (e) => {
   entries.sort((a, b) => a.price - b.price);
 
   const id = document.getElementById('f-id').value || crypto.randomUUID();
+  const existing = products.find((p) => p.id === id);
   const product = {
     id,
     category: document.getElementById('f-category').value,
@@ -555,6 +556,12 @@ form.addEventListener('submit', async (e) => {
     kana: document.getElementById('f-kana').value.trim(),
     entries,
   };
+  // 新規登録は登録日時を記録して一番上に表示する。編集時は元の値を維持(古いデータは未設定のまま)
+  if (existing) {
+    if (existing.createdAt !== undefined) product.createdAt = existing.createdAt;
+  } else {
+    product.createdAt = Date.now();
+  }
   await dbPut(product);
   await loadProducts();
   closeModal();
@@ -631,7 +638,8 @@ function render() {
   const items = products
     .filter((p) => p.category === currentCategory)
     .filter((p) => currentKanaRow === 'all' || kanaRowOf(p.kana) === currentKanaRow)
-    .sort((a, b) => (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+      || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
 
   listEl.innerHTML = '';
   emptyMsg.hidden = items.length > 0;
