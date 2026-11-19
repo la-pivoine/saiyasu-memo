@@ -207,7 +207,12 @@ shoppingForm.addEventListener('submit', async (e) => {
     name: document.getElementById('s-name').value.trim(),
     stores,
     createdAt: existing ? existing.createdAt : Date.now(),
-    order: existing && existing.order !== undefined ? existing.order : Date.now(),
+    // 新規登録は一番上に表示する(既存の最小order - 1)。編集時は元の順番を維持
+    order: existing && existing.order !== undefined
+      ? existing.order
+      : (shoppingItems.length
+        ? Math.min(...shoppingItems.map((s) => s.order ?? s.createdAt ?? 0)) - 1
+        : Date.now()),
   };
   await dbPut(item, SHOPPING_STORE_NAME);
   await loadShoppingItems();
